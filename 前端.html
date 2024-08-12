@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stream Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+     <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+
+
+<div class="container">
+  <h1>👋基于债权大模型的聊天机器人👋🤖</h1>
+  <h2>聊天记录</h2>
+</div>
+
+
+
+<div class="history-container">
+    <div id="history" style="height: 600px; overflow-y: auto"></div>
+
+</div>
+
+<div class="container1">
+    <div class="input"><textarea id="input" placeholder="请输入您想问的问题"></textarea></div>
+    <div class="audio-btn"><button id="audio-btn">🎙️</button></div>
+    <div class="cancel-btn"><button id="cancel-btn">删除</button></div>
+    <div class="start-btn"><button id="start-btn">发送</button></div>
+</div>
+
+    <script>
+          let questionHistory = []; // 存储用户提出的问题
+        let currentQuestionIndex = -1; // 当前显示的问题在历史中的索引
+
+        const inputTextarea = document.getElementById('input');
+
+        // 监听键盘按键事件
+        inputTextarea.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                showPreviousQuestion();
+                console.log("按键成功")
+            }
+        });
+        console.log(questionHistory.length);
+        // 显示上一个问题
+        function showPreviousQuestion() {
+            if (questionHistory.length === 0) return;
+
+            if (currentQuestionIndex === -1) {
+                currentQuestionIndex = questionHistory.length - 1;
+            } else if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+            }
+
+            inputTextarea.value = questionHistory[currentQuestionIndex];
+            console.log(inputTextarea.value)
+        }
+
+        // 添加新问题到历史记录
+        function addToQuestionHistory(question) {
+            questionHistory.push(question);
+            currentQuestionIndex = -1; // 重置索引，以便在按上箭头时从最新问题开始
+        }
+
+        var xhr;
+        var startBtn = document.getElementById("start-btn");
+        {#var output = document.getElementById("output");#}
+        var cancelBtn = document.getElementById("cancel-btn");
+        var audioBtn = document.getElementById("audio-btn");
+        var input = document.getElementById("input");
+        var lastText = '';
+
+        startBtn.addEventListener("click", function() {
+
+            var chatDiv = document.getElementById('history');
+
+            var UserDiv = document.createElement('div');
+            UserDiv.innerHTML = '<div style="font-size: 1.5em;">🤡</div>';
+            chatDiv.appendChild(UserDiv);
+
+            var text_user = input.value;
+            var UserLogDiv = document.createElement('div');
+            UserLogDiv.style="background-color: #F0F0F0; border-radius: 16px; max-width: 80%; margin: 10px 0; padding: 12px; display: inline-block;"
+            UserLogDiv.innerText = text_user;
+            chatDiv.appendChild(UserLogDiv);
+            const question = inputTextarea.value.trim();
+
+            if (question !== '') {
+                addToQuestionHistory(question);
+                input.value = '';
+            }
+
+
+            var BotDiv = document.createElement('div');
+            BotDiv.innerHTML = '<div style="font-size: 1.5em;">🤖</div>';
+            chatDiv.appendChild(BotDiv);
+
+            var BotLogDiv = document.createElement('div');
+            BotLogDiv.style="background-color: #CCEEB6; border-radius: 16px; max-width: 80%; margin: 10px 0; padding: 12px; display: inline-block;"
+            chatDiv.appendChild(BotLogDiv);
+            var output = chatDiv.lastElementChild;
+
+            var output1 = document.createElement('div');  // Create a new output element
+            chatDiv.appendChild(output1);
+            if (xhr && xhr.readyState !== XMLHttpRequest.DONE) {
+              xhr.abort();
+            }
+            output.textContent = '已收到请求，正在竭力加载数据，请稍候...';
+            let totalEdgeMoney = 0;
+            xhr = new XMLHttpRequest();
+            var url = "/stream?text=" + encodeURIComponent(text_user);
+            {#xhr.open("GET", "/stream");#}
+            xhr.open("GET", url);
+            xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
+            console.log(xhr)
+            console.log(xhr.setRequestHeader)
+            if (chatDiv.scrollHeight > chatDiv.clientHeight) {
+               chatDiv.scrollTop =  Math.floor(chatDiv.scrollHeight - chatDiv.clientHeight);
+            }
+
+            xhr.onreadystatechange = function() {
+
+
+
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var decodedData = JSON.parse(xhr.responseText);
+                    // 输出完整的响应到控制台
+                    console.log(decodedData);
+                    const output_type = decodedData.output_type;
+
+                    if (decodedData && decodedData.output) {
+
+                        if (output_type === "string") {
+                            // Assuming output is a reference to the output element
+                            console.log("neiromhg", decodedData.output)
+                            output.textContent = decodedData.output;
+
+                        } else if (decodedData.output.data.count[0].total === 0) {
+
+                            output.textContent = "不存在可用数据!请重新输入...";
+
+                        } else if (output_type === "neo4j_data" && (decodedData.output.data.task_name === 'get_child_to_child_debt'||decodedData.output.data.task_name ==='get_child_to_child_debt_by_details' )) {
+                           // 创建一个新的表格容器
+                            var newTableContainer = document.createElement('div');
+                            newTableContainer.id = 'TableContainer' + Date.now(); // 使用时间戳来确保ID的唯一性
+                            newTableContainer.className = 'table-container';
+
+                            {#var tableContainer = document.getElementById('TableContainer');#}
+
+                            const taskData = decodedData.output.data.data;
+                            const taskName = decodedData.output.data.task_name;
+                            const totalCount = decodedData.output.data.count[0].total;
+                            const state = decodedData.output.msg;
+                            console.log('Task Name:', taskName);
+                            console.log('Total Count:', totalCount);
+                            console.log('Task Data:', taskData);
+                            console.log('state:', state);
+                            {#tableContainer.innerHTML = '';#}
+                            newTableContainer.innerHTML = '';
+                            // Display the data in a table
+                            var table = '<table border="1">';
+                            // 这个是查询一家公司到另一家公司的应付账款
+                            // 问题：山东省公路桥梁建设集团有限公司桥梁养护科技公司给山东高速工程检测有限公司的应付账款查询
+
+                            table += '<tr><th>付款单位编号</th><th>付款单位名称</th><th>付款单位性质</th><th>应付账款</th><th>项目编号</th><th>项目明细编号</th><th>项目名称</th><th>项目明细</th><th>收款单位编号</th><th>收款单位名称</th><th>收款单位性质</th></tr>';
+
+                            taskData.forEach(item => {
+                                const child1 = item.child1 || {};
+                                const edge = item.edge || {};
+                                const child2 = item.child2 || {};
+
+                                const child1Number = child1.number || 'None';
+                                const child1Name = child1.name || 'None';
+                                const child1Label = child1.label || 'None';
+                                const edgeMoney = edge.money || 'None';
+                                const edgePNumber = edge.p_number || 'None';
+                                const edgeSNumber = edge.s_number || 'None';
+                                const edgePName = edge.p_name || 'None';
+                                const edgeSDetail = edge.s_detail || 'None';
+                                const child2Number = child2.number || 'None';
+                                const child2Name = child2.name || 'None';
+                                const child2Label = child2.label || 'None';
+                                totalEdgeMoney += parseFloat(edgeMoney); // 将 edgeMoney 的值累加到 totalEdgeMoney 中
+
+                                table += `<tr>
+                                            <td>${child1Number}</td>
+                                            <td>${child1Name}</td>
+                                            <td>${child1Label}</td>
+                                            <td>${edgeMoney}</td>
+                                            <td>${edgePNumber}</td>
+                                            <td>${edgeSNumber}</td>
+                                            <td>${edgePName}</td>
+                                            <td>${edgeSDetail}</td>
+                                            <td>${child2Number}</td>
+                                            <td>${child2Name}</td>
+                                            <td>${child2Label}</td>
+                                        </tr>`;
+                            });
+                            table += '</tbody></table>';
+
+                            output.textContent = state + "我一共找到了" + totalCount + "条信息共" + totalEdgeMoney + "元并以表格的形式展示";
+                            newTableContainer.innerHTML = table;
+                            var newOutputContainer = document.createElement('div');
+                            newOutputContainer.className = 'output-container'; // 添加一个类名，以便于样式管理
+                            // 将表格容器添加到输出容器中
+                            newOutputContainer.appendChild(newTableContainer);
+                            newOutputContainer.style.marginTop = '20px';
+                            newOutputContainer.style.width = '100%';
+                            var historyContainer = document.getElementById('history');
+                            // 将新的输出容器添加到历史容器中
+                            historyContainer.appendChild(newOutputContainer);
+
+                        } else if (output_type === "neo4j_data" && decodedData.output.data.task_name === 'get_child_receivables') {
+
+                            var newTableContainer = document.createElement('div');
+                            newTableContainer.id = 'TableContainer' + Date.now(); // 使用时间戳来确保ID的唯一性
+                            newTableContainer.className = 'table-container';
+                            const taskData = decodedData.output.data.data;
+                            const taskName = decodedData.output.data.task_name;
+                            const totalCount = decodedData.output.data.count[0].total;
+                            const company = decodedData.output.data.data[0].child.name;
+                            const state = decodedData.output.msg;
+                            console.log('Task Name:', taskName);
+                            console.log('Total Count:', totalCount);
+                            console.log('Task Data:', taskData);
+                            console.log('state:', state);
+                            newTableContainer.innerHTML = ''
+
+                            var table = '<table border="1">';
+                            table += '<tr><th>子单位编号</th><th>子单位名称</th><th>子单位性质</th><th>子单位应收账款</th><th>项目编号</th><th>业务明细编号</th><th>项目名称</th><th>业务明细</th><th>母单位编号</th><th>母单位名称</th><th>母单位性质</th></tr>';
+                            // 获取某家公司的应付账款
+                            // 问题：山东高速莱钢绿建发展有限公司淄博钢构分公司的应收账款是多少
+                            taskData.forEach(item => {
+                                const other = item.other || {};
+                                const edge = item.edge || {};
+                                const child = item.child || {};
+
+                                const otherNumber = other.number || 'None';
+                                const otherName = other.name || 'None';
+                                const otherLabel = other.label || 'None';
+                                const edgeMoney = edge.money || 'None';
+                                const edgePNumber = edge.p_number || 'None';
+                                const edgeSNumber = edge.s_number || 'None';
+                                const edgePName = edge.p_name || 'None';
+                                const edgeSDetail = edge.s_detail || 'None';
+                                const childNumber = child.number || 'None';
+                                const childName = child.name || 'None';
+                                const childLabel = child.label || 'None';
+                                totalEdgeMoney += parseFloat(edgeMoney);
+                                table += `<tr>
+                                            <td>${otherNumber}</td>
+                                            <td>${otherName}</td>
+                                            <td>${otherLabel}</td>
+                                            <td>${edgeMoney}</td>
+                                            <td>${edgePNumber}</td>
+                                            <td>${edgeSNumber}</td>
+                                            <td>${edgePName}</td>
+                                            <td>${edgeSDetail}</td>
+                                            <td>${childNumber}</td>
+                                            <td>${childName}</td>
+                                            <td>${childLabel}</td>
+                                        </tr>`;
+                            });
+                            table += '</tbody></table>';
+
+                            output.textContent = state + "我一共找到了" + totalCount + "条"+ company +"所有应收账款信息共"+ totalEdgeMoney +"元并以表格的形式展示";
+                            newTableContainer.innerHTML = table;
+                            var newOutputContainer = document.createElement('div');
+                            newOutputContainer.className = 'output-container'; // 添加一个类名，以便于样式管理
+                            // 将表格容器添加到输出容器中
+                            newOutputContainer.appendChild(newTableContainer);
+                            newOutputContainer.style.marginTop = '20px';
+                            newOutputContainer.style.width = '100%';
+                            var historyContainer = document.getElementById('history');
+                            // 将新的输出容器添加到历史容器中
+                            historyContainer.appendChild(newOutputContainer);
+                        } else if (output_type === "neo4j_data" && decodedData.output.data.task_name === 'get_child_node') {
+
+                            {#var tableContainer = document.getElementById('TableContainer');#}
+                            var newTableContainer = document.createElement('div');
+                            newTableContainer.id = 'TableContainer' + Date.now(); // 使用时间戳来确保ID的唯一性
+                            newTableContainer.className = 'table-container';
+
+                            const taskData = decodedData.output.data.data;
+                            const taskName = decodedData.output.data.task_name;
+                            const totalCount = decodedData.output.data.count[0].total;
+                            const state = decodedData.output.msg;
+                            console.log('Task Name:', taskName);
+                            console.log('Total Count:', totalCount);
+                            console.log('Task Data:', taskData);
+                            console.log('state:', state);
+                            newTableContainer.innerHTML = '';
+
+                            var table = '<table border="1">';
+                            // 获取一家公司有哪些子公司
+                            // 欧亚班列公司的子公司有那些
+                            table += '<tr><th>母单位编号</th><th>母单位名称</th><th>母单位性质</th><th>子单位编号</th><th>子单位名称</th><th>子单位性质</th></tr>';
+                            {#table += '<tr><th>parent_Number</th><th>par_Name</th><th>par_Label</th><th>Money</th><th>P Number</th><th>S Number</th><th>P Name</th><th>S Detail</th><th>Child Number</th><th>Child Name</th><th>Child Label</th></tr>';#}
+                            taskData.forEach(item => {
+                                const parent = item.parent || {};
+                                const edge = item.edge || {};
+                                const child = item.child || {};
+
+                                const parent_Number = parent.number || 'None';
+                                const par_Name = parent.name || 'None';
+                                const par_rLabel = parent.label || 'None';
+                                const childNumber = child.number || 'None';
+                                const childName = child.name || 'None';
+                                const childLabel = child.label || 'None';
+
+                                table += `<tr>
+                                            <td>${parent_Number}</td>
+                                            <td>${par_Name}</td>
+                                            <td>${par_rLabel}</td>
+                                            <td>${childNumber}</td>
+                                            <td>${childName}</td>
+                                            <td>${childLabel}</td>
+                                        </tr>`;
+                            });
+                            table += '</tbody></table>';
+
+                            output.textContent = '';
+                            output.textContent = state + "我一共找到了" + totalCount + "条信息,并以表格的形式展示";
+
+                            newTableContainer.innerHTML = table;
+                            var newOutputContainer = document.createElement('div');
+                            newOutputContainer.className = 'output-container'; // 添加一个类名，以便于样式管理
+                            // 将表格容器添加到输出容器中
+                            newOutputContainer.appendChild(newTableContainer);
+                            newOutputContainer.style.marginTop = '20px';
+                            newOutputContainer.style.width = '100%';
+                            var historyContainer = document.getElementById('history');
+                            // 将新的输出容器添加到历史容器中
+                            historyContainer.appendChild(newOutputContainer);
+
+
+                        } else if (output_type === "neo4j_data" && decodedData.output.data.task_name === 'get_child_ring') {
+
+                            var newTableContainer = document.createElement('div');
+                            newTableContainer.id = 'TableContainer' + Date.now(); // 使用时间戳来确保ID的唯一性
+                            newTableContainer.className = 'table-container';
+
+                            const taskData = decodedData.output.data.data;
+                            const taskName = decodedData.output.data.task_name;
+                            const totalCount = decodedData.output.data.count[0].total;
+                            const state = decodedData.output.msg;
+                            console.log('Task Name:', taskName);
+                            console.log('Total Count:', totalCount);
+                            console.log('Task Data:', taskData);
+                            console.log('state:', state);
+                            newTableContainer.innerHTML = '';
+
+                            var table = '<table border="1">';
+                            table += '<tr><th>节点编号1</th><th>节点名称1</th><th>单位性质1</th><th>应付金额1</th><th>项目编号1</th><th>业务明细编号1</th><th>业务明细名称1</th><th>业务细节1</th>' +
+                                '<th>节点编号2</th><th>节点名称2</th><th>单位性质2</th><th>应付金额2</th><th>项目编号2</th><th>业务明细编号2</th><th>业务明细名称2</th><th>业务细节2</th>'+
+                                '<th>节点编号3</th><th>节点名称3</th><th>单位性质3</th><th>应付金额3</th><th>项目编号3</th><th>业务明细编号3</th><th>业务明细名称3</th><th>业务细节3</th></tr>';
+                            // 查询三角债
+                            taskData.forEach(item => {
+                                const Node1 = item.path[0].Node || {};
+                                const Node1_edge = item.path[1].HAS_DEBT || {};
+                                const Node2 = item.path[2].Node || {};
+                                const Node2_edge = item.path[3].HAS_DEBT || {};
+                                const Node3 = item.path[4].Node || {};
+                                const Node3_edge = item.path[5].HAS_DEBT|| {};
+
+                                const Node1_number = Node1.number || 'None';
+                                const Node1_Name = Node1.name || 'None';
+                                const Node1_Label = Node1.label || 'None';
+                                const Node1_Money = Node1_edge.money || 'None';
+                                const Node1_PNumber = Node1_edge.p_number || 'None';
+                                const Node1_SNumber = Node1_edge.s_number || 'None';
+                                const Node1_PName = Node1_edge.p_name || 'None';
+                                const Node1_Detail = Node1_edge.s_detail || 'None';
+                                const Node2_Number = Node2.number || 'None';
+                                const Node2_Name = Node2.name || 'None';
+                                const Node2_Label = Node2.label || 'None';
+                                const Node2_Money = Node2_edge.money || 'None';
+                                const Node2_PNumber = Node2_edge.p_number || 'None';
+                                const Node2_SNumber = Node2_edge.s_number || 'None';
+                                const Node2_PName = Node2_edge.p_name || 'None';
+                                const Node2_Detail = Node2_edge.s_detail || 'None';
+                                const Node3_Number = Node3.number || 'None';
+                                const Node3_Name = Node3.name || 'None';
+                                const Node3_Label = Node3.label || 'None';
+                                const Node3_Money = Node3_edge.money || 'None';
+                                const Node3_PNumber = Node3_edge.p_number || 'None';
+                                const Node3_SNumber = Node3_edge.s_number || 'None';
+                                const Node3_PName = Node3_edge.p_name || 'None';
+                                const Node3_Detail = Node3_edge.s_detail || 'None';
+
+                                table += `<tr>
+                                            <td>${Node1_number}</td>
+                                            <td>${Node1_Name}</td>
+                                            <td>${Node1_Label}</td>
+                                            <td>${Node1_Money}</td>
+                                            <td>${Node1_PNumber}</td>
+                                            <td>${Node1_SNumber}</td>
+                                            <td>${Node1_PName}</td>
+                                            <td>${Node1_Detail}</td>
+                                            <td>${Node2_Number}</td>
+                                            <td>${Node2_Name}</td>
+                                            <td>${Node2_Label}</td>
+                                            <td>${Node2_Money}</td>
+                                            <td>${Node2_PNumber}</td>
+                                            <td>${Node2_SNumber}</td>
+                                            <td>${Node2_PName}</td>
+                                            <td>${Node2_Detail}</td>
+                                            <td>${Node3_Number}</td>
+                                            <td>${Node3_Name}</td>
+                                            <td>${Node3_Label}</td>
+                                            <td>${Node3_Money}</td>
+                                            <td>${Node3_PNumber}</td>
+                                            <td>${Node3_SNumber}</td>
+                                            <td>${Node3_PName}</td>
+                                            <td>${Node3_Detail}</td>
+
+
+                                        </tr>`;
+                            });
+                            table += '</tbody></table>';
+
+                            output.textContent = state + "我一共找到了" + totalCount + "条信息,并以表格和图的形式展示";
+
+
+                            newTableContainer.innerHTML = table;
+                            var newOutputContainer = document.createElement('div');
+                            newOutputContainer.className = 'output-container'; // 添加一个类名，以便于样式管理
+                            // 将表格容器添加到输出容器中
+                            newOutputContainer.appendChild(newTableContainer);
+                            newOutputContainer.style.marginTop = '20px';
+                            newOutputContainer.style.width = '100%';
+                            var historyContainer = document.getElementById('history');
+                            // 将新的输出容器添加到历史容器中
+                            historyContainer.appendChild(newOutputContainer);
+
+
+                            // Create a new canvas for D3 visualization
+                            var newCanvasContainer = document.createElement('div');
+                            newCanvasContainer.id = 'CanvasContainer' + Date.now(); // Unique ID using timestamp
+                            newCanvasContainer.className = 'canvas-container';
+                            newCanvasContainer.style.marginTop = '20px';
+                            newCanvasContainer.style.width = '100%';
+
+                            newOutputContainer.appendChild(newCanvasContainer); //这里为什么是newChatContainer
+                            var historyContainer = document.getElementById('history');
+                            historyContainer.appendChild(newOutputContainer);
+                            const width = 1200;
+                            const height = 400;
+                            const svg = d3.select(historyContainer).append('svg')
+                            .attr('width', width)
+                            .attr('height', height)
+                            .style('display', 'block') // 将SVG元素设置为块级元素
+                            .style('margin', 'auto'); // 使用margin:auto来使SVG水平居中
+
+                            const tooltip = d3.select('body').append('div')
+                            .attr('class', 'tooltip');
+
+                          // Create a force simulation
+                          const simulation = d3.forceSimulation()
+                            .force('link', d3.forceLink().id(d => d.number).distance(100).strength(0.2))
+                            .force('charge', d3.forceManyBody().strength(-200))
+                            .force('center', d3.forceCenter(width / 2, height / 2))
+                            .force('x', d3.forceX(width / 2).strength(0.1))
+                            .force('y', d3.forceY(height / 2).strength(0.1));
+
+                          // Extract nodes and links from the data
+                          const paths = decodedData.output.data.data;
+                          const nodesMap = new Map();
+                          const links = [];
+
+                          for (let i = 0; i < paths.length; i++) {
+                            const pathNodes = paths[i].path;
+                            for (let j = 0; j < pathNodes.length; j += 2) {
+                              if (pathNodes[j].Node) {
+                                  // Node
+                                  const node = {
+                                      number: pathNodes[j].Node.number,
+                                      name: pathNodes[j].Node.name,
+                                      label: pathNodes[j].Node.label
+                                  };
+
+
+                                // Add node to the map to remove duplicates
+                                nodesMap.set(node.number, node);
+
+                                // Edge
+                                if (j < pathNodes.length - 1 && pathNodes[j + 1].HAS_DEBT) {
+                                  // Target node for the edge
+                                  const targetNode = {
+                                    number: pathNodes[j + 2].Node.number,
+                                    name: pathNodes[j + 2].Node.name,
+                                    label: pathNodes[j + 2].Node.label
+                                  };
+
+                                  // Create the link
+                                  const edge = {
+                                    source: node.number,
+                                    target: targetNode.number,
+                                    head_name : pathNodes[j].Node.name,
+                                    tail_name : pathNodes[j + 2].Node.name,
+                                    value: pathNodes[j + 1].HAS_DEBT.money,
+                                    p_number: pathNodes[j + 1].HAS_DEBT.p_number,
+                                    s_number: pathNodes[j + 1].HAS_DEBT.s_number,
+                                    p_name: pathNodes[j + 1].HAS_DEBT.p_name,
+                                    s_detail: pathNodes[j + 1].HAS_DEBT.s_detail
+                                  };
+
+                                  // 检查是否已经存在具有相同 p_number 的边
+                                    const isDuplicate = links.some(link => link.p_number === edge.p_number);
+
+                                    // 如果不存在重复的边，则添加这条新边
+                                    if (!isDuplicate) {
+                                      links.push(edge);
+                                    }
+                                }
+                              }
+                            }
+                          }
+                          console.log(links)
+                            // 创建一个对象，以节点对为键
+                            const edgeMap = {};
+                            // 遍历所有的边，将相同节点对应的边信息合并
+                            links.forEach(edge => {
+                                const key = edge.source + '-' + edge.target; // 以源节点和目标节点组合作为键
+                                if (!edgeMap[key]) {
+                                    // 如果键不存在，则将当前边信息作为值存储
+                                    edgeMap[key] = edge;
+                                } else {
+                                    // 如果键已经存在，则合并边信息
+                                    const existingEdge = edgeMap[key];
+                                    existingEdge.head_name = [existingEdge.head_name]
+                                    existingEdge.tail_name = [existingEdge.tail_name]
+                                    existingEdge.value = [existingEdge.value];
+                                    existingEdge.p_number = [existingEdge.p_number];
+                                    existingEdge.s_number = [existingEdge.s_number];
+                                    existingEdge.p_name = [existingEdge.p_name];
+                                    existingEdge.s_detail = [existingEdge.s_detail];
+
+                                    existingEdge.head_name.push(edge.head_name);
+                                    existingEdge.tail_name.push(edge.tail_name);
+                                    existingEdge.value.push(edge.value);// 合并边的值
+                                    existingEdge.p_number.push(edge.p_number);// 合并边的值
+                                    existingEdge.s_number.push(edge.s_number);// 合并边的值
+                                    existingEdge.p_name.push(edge.p_name);// 合并边的值
+                                    existingEdge.s_detail.push(edge.s_detail);// 合并边的值
+                                    // 这里您可能还需要合并其他属性
+                                }
+                            });
+
+                            // 将合并后的边信息转换为数组以供绘制
+                            const mergedEdges = Object.values(edgeMap);
+                            console.log(mergedEdges)
+                          // Convert nodesMap to an array for rendering
+                          const nodes = Array.from(nodesMap.values());
+
+                          // Add links
+                          const link = svg.selectAll('.link')
+                            .data(mergedEdges)
+                            .enter().append('line')
+                            .attr('class', 'link')
+                            .attr('stroke', 'red') // 设置边的颜色
+                            .attr('stroke-width', 4) // 设置边的宽度
+                            .on('mouseover', showEdgeInfo)
+                            .on('mouseout', hideTooltip);
+
+
+                          // Add nodes
+                          const node = svg.selectAll('.node')
+                            .data(nodes)
+                            .enter().append('circle')
+                            .attr('class', 'node')
+                            {#.attr('r', 10)#}
+                            .attr('r', function(d, i) {
+                                return i === 0 ? '15' : '10';
+                            })
+                            .attr('fill', function(d, i) { // 根据索引设置节点的颜色
+                                return i === 0 ? 'green' : '#ccc'; // 如果是第一个节点，设置为蓝色，否则设置为默认颜色
+                            })
+                            .on('mouseover', showNodeInfo)
+                            .on('mouseout', hideTooltip)
+                            .call(d3.drag()
+                              .on('start', dragstarted)
+                              .on('drag', dragged)
+                              .on('end', dragended));
+
+                          // Add labels to nodes
+                          const label = svg.selectAll('.label')
+                            .data(nodes)
+                            .enter().append('text')
+                            .attr('class', 'label')
+                            .attr('dx', 12)
+                            .attr('dy', '.35em')
+                            .text(d => splitText(d.name));
+
+                          function splitText(text) {
+                            const maxLength = 5; // 每行最多显示的字数
+                            const lines = [];
+                            for (let i = 0; i < text.length; i += maxLength) {
+                                lines.push(text.substr(i, maxLength));
+                            }
+                            return lines.join('\n'); // 使用换行符连接多行文本
+                        }
+                          // Update positions each tick
+                          simulation.nodes(nodes)
+                            .on('tick', () => {
+
+                              link
+                                .attr('x1', d => Math.max(0, Math.min(width, d.source.x)))
+                                .attr('y1', d => Math.max(0, Math.min(height, d.source.y)))
+                                .attr('x2', d => Math.max(0, Math.min(width, d.target.x)))
+                                .attr('y2', d => Math.max(0, Math.min(height, d.target.y)));
+
+                              node
+                                .attr('cx', d => Math.max(0, Math.min(width, d.x)))
+                                .attr('cy', d => Math.max(0, Math.min(height, d.y)));
+
+                              label
+                                .attr('x', d => Math.max(0, Math.min(width, d.x)))
+                                .attr('y', d => Math.max(0, Math.min(height, d.y)));
+                            });
+
+                          simulation.force('link').links(links);
+                          function dragstarted(event, d) {
+                            if (!event.active) simulation.alphaTarget(0.3).restart();
+                            d.fx = d.x;
+                            d.fy = d.y;
+                          }
+
+                          function dragged(event, d) {
+                            d.fx = event.x;
+                            d.fy = event.y;
+                          }
+
+                          function dragended(event, d) {
+                            if (!event.active) simulation.alphaTarget(0);
+                            d.fx = null;
+                            d.fy = null;
+                          }
+
+                          function showNodeInfo(event, d) {
+                            tooltip.transition()
+                              .duration(200)
+                              .style('opacity', 0.9);
+                            tooltip.html(`<strong>节点名称：</strong> ${d.name}<br><strong>节点编号:</strong> ${d.number}<br><strong>单位性质:</strong> ${d.label}`)
+                              .style('left', (event.pageX) + 'px')
+                              .style('top', (event.pageY - 28) + 'px');
+                          }
+
+                          function showEdgeInfo(event, d) {
+                            tooltip.transition()
+                              .duration(200)
+                              .style('opacity', 0.9);
+                                tooltip.html(`<table>
+
+                                                  <tbody>
+                                                    <tr>
+                                                      <td><strong>头节点:</strong></td>
+                                                      <td>${d.head_name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>尾节点:</strong></td>
+                                                      <td>${d.tail_name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>项目名称:</strong></td>
+                                                      <td>${d.p_name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>应付金额:</strong></td>
+                                                      <td>${d.value}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>项目编号:</strong></td>
+                                                      <td>${d.p_number}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>业务明细编号:</strong></td>
+                                                      <td>${d.s_number}</td>
+                                                    </tr>
+                                                    <tr>
+                                                      <td><strong>业务明细名称:</strong></td>
+                                                      <td>${d.s_detail}</td>
+                                                    </tr>
+                                                  </tbody>
+                                                </table>`)
+                              .style('left', (event.pageX) + 'px')
+                              .style('top', (event.pageY - 28) + 'px');
+                          }
+
+                          function hideTooltip() {
+                            tooltip.transition()
+                              .duration(500)
+                              .style('opacity', 0);
+                          }
+
+                            }
+                            else
+                            {
+                                console.error('Unknown output_type:', output_type);
+                            }
+                        }
+                    }
+
+                    output.scrollTop = output.scrollHeight;
+                    if (chatDiv.scrollHeight > chatDiv.clientHeight) {
+                        chatDiv.scrollTop = Math.floor(chatDiv.scrollHeight - chatDiv.clientHeight);
+                    }
+                }
+                    xhr.send();
+
+            });
+
+
+        cancelBtn.addEventListener("click", function() {
+            if (xhr && xhr.readyState !== XMLHttpRequest.DONE) {
+              xhr.abort();
+            }
+            xhr = new XMLHttpRequest();
+            xhr.open("GET", "/cancel");
+            xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
+            xhr.send();
+            input.value = '';
+            });
+
+
+        // 当按住按钮时发送请求
+        audioBtn.addEventListener("mousedown", function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/recordStart", true);
+            xhr.send();
+        });
+
+        // 当松开按钮时发送请求
+        audioBtn.addEventListener("mouseup", function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/recordStop", true);
+            xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                var text = xhr.responseText;
+                input.value = text
+            }
+          };
+            xhr.send();
+
+        });
+
+        // 当移开按钮时发送请求
+        audioBtn.addEventListener("mouseleave", function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/recordLeave", true);
+            xhr.send();
+        });
+
+
+
+</script>
+
+</body>
+
+
+<style>
+
+
+    .container {
+        display: flex; /* 设置容器为弹性布局 */
+        flex-direction: column; /* 设置子元素沿垂直方向排列 */
+        align-items: center; /* 水平居中 */
+        gap: 10px; /* 设置元素间隔为10px */
+    }
+
+
+    .history-container {
+        margin-left: 5%;
+        margin-right: 5%;
+}
+    #outputContainer {
+            margin-top: 20px;
+            max-width: 80%;
+        }
+    .container1 {
+  display: flex; /* 设置容器为弹性布局 */
+  justify-content: center; /* 水平居中 */
+  gap: 0px; /* 设置元素间隔为10px */
+  height: 45px; /* 设置高度 */
+  position: absolute;
+  bottom: 20px;
+  left: 35%;
+  right: 35%;
+}
+
+    #input, #audio-btn, #cancel-btn, #start-btn {
+  height: 42px; /* 设置高度 */
+  box-sizing: border-box; /* 设置盒模型为border-box，以便更好地控制元素尺寸 */
+  border-radius: 20px; /* 设置文本框的圆角 */
+  font-size: 18px; /* 设置字体大小 */
+  padding: 5px; /* 设置内边距 */
+  margin: 5px; /* 设置外边距 */
+  vertical-align: middle; /* 垂直居中 */
+}
+
+#input {
+  width: 550px; /* 计算文本框的宽度 */
+}
+
+#audio-btn, #cancel-btn, #start-btn {
+  width: 80px; /* 设置按钮的宽度 */
+}
+
+#start-btn {
+  background-color: green; /* 设置发送按钮的背景色为绿色 */
+  border-color: black;
+  color: white; /* 设置发送按钮的字体颜色为白色 */
+  {#border: none; /* 移除边框 */#}
+}
+
+#cancel-btn {
+  background-color: red; /* 设置取消按钮的背景色为红色 */
+  border-color: black;
+  color: white; /* 设置取消按钮的字体颜色为白色 */
+  {#border: none; /* 移除边框 */#}
+}
+
+#audio-btn {
+  font-size: 30px; /* 设置麦克风按钮的字体大小 */
+  border: none; /* 移除边框 */
+  background-color: transparent; /* 移除背景色 */
+  cursor: pointer; /* 添加手型光标 */
+}
+svg {
+      {#border: 1px solid #ccc;#}
+    }
+
+.link {
+      stroke: red;
+      stroke-width: 4;
+    }
+.node{
+
+}
+.tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #ddd;
+      padding: 5px;
+      opacity: 0;
+      pointer-events: none;
+    }
+.node:nth-child(1) {
+    fill: blue;
+}
+.label {
+    font-size: 12px; /* 设置字体大小为 12 像素 */
+}
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 10px; /* 设置字体大小为 10px */
+    }
+
+    th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+  .tooltip table {
+    border-collapse: collapse;
+    border: 1px solid black; /* 设置表格边框 */
+  }
+  .tooltip th, .tooltip td {
+    border: 1px solid black; /* 设置表头单元格和数据单元格边框 */
+    padding: 8px; /* 添加一些内边距 */
+  }
+</style>
+
+</html>
